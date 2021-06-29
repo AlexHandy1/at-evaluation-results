@@ -7,7 +7,7 @@ library(ggplot2)
 # - conditional project background page with summary bullets and study design overview and relevant links
 # - conditional results page with show results for (Q1, Q2, Q3)
 # - Q1 results -> medication category vs individual medication -> (2 options)
-  #bar charts
+  #replace bar chart images with raw data
 # - Q2 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020 and May 2021 (2 options - maybe 4) -> (min. 6 options, possibly 12)
   #forest plots
   #table of ORs and p-values
@@ -40,6 +40,18 @@ ui <- fluidPage(
           selectInput("category", strong("Chart type"), 
                       choices = c("by category","by drug"), selected = "by AT category"),
         ), 
+        
+        conditionalPanel(
+          #can expand this to an OR statement with Question 3
+          condition = "input.question == 'Question 2: AT use factors'",
+          selectInput("medication", strong("Medication comparison"), 
+                      choices = c("AT vs no AT","AC vs AP", "DOACs vs warfarin"), selected = "AT vs no AT"),
+        ), 
+        conditionalPanel(
+          condition = "input.question == 'Question 2: AT use factors'",
+          selectInput("start_date", strong("Date"), 
+                      choices = c("Jan 2020", "May 2021"), selected = "Jan 2020"),
+        ),
       ),
       
     ),
@@ -54,7 +66,12 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.question == 'Question 1: AT use'",
           imageOutput("q1")
-        )
+        ),
+        
+        conditionalPanel(
+          condition = "input.question == 'Question 2: AT use factors'",
+          plotOutput("q2_plot")
+        ),
       )
       
     )
@@ -62,12 +79,6 @@ ui <- fluidPage(
 )
 
 server <- function(input, output) {
-  
-  #----------------DATA PREPARATION----------------
-  
-  #Load data for q1
-  
-  #ADD UNDERLYING CHART DATA
   
   output$hello = renderText({
     "Hello world"
@@ -90,6 +101,58 @@ server <- function(input, output) {
          height = 500,
          alt = "This is a bar chart")
   }, deleteFile = FALSE)
+  
+  #Load data for q2
+  
+  q2_any_at_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2020_01_01_14_06_2021.csv", header=T)
+  q2_ac_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2020_01_01_14_06_2021.csv", header=T)
+  q2_doacs_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2020_01_01_14_06_2021.csv", header=T)
+  
+  q2_any_at_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2021_04_01_14_06_2021.csv", header=T)
+  q2_ac_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2021_04_01_14_06_2021.csv", header=T)
+  q2_doacs_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2021_04_01_14_06_2021.csv", header=T)
+  
+  #TABLES NEED TO BE UPDATED AND EXPORTED
+  #ADD IN LATEST CHART CODE WHICH WILL INCLUDE FACET GROUPS
+  output$q2_plot = renderPlot({
+    
+    #add if statement for years and medication category
+    medication = input$medication
+    date = input$start_date
+    print(medication)
+    print(date)
+    
+    if (medication == "AT vs no AT" & date == "Jan 2020"){ 
+      chart_data = q2_any_at_2020_01_01 
+      title_text = "Multivariate results for Any AT vs no AT Jan 2020"
+    }else if (medication == "AT vs no AT" & date == "May 2021") { 
+      chart_data = q2_any_at_2021_05_01 
+      title_text = "Multivariate results for Any AT vs no AT May 2021"
+    }else if (medication == "AC vs AP" & date == "Jan 2020") { 
+      chart_data = q2_ac_2020_01_01 
+      title_text = "Multivariate results for AC vs AP Jan 2020"
+    }else if (medication == "AC vs AP" & date == "May 2021") { 
+      chart_data = q2_ac_2021_05_01 
+      title_text = "Multivariate results for AC vs AP May 2021"
+    }else if (medication == "DOACs vs warfarin" & date == "Jan 2020") { 
+      chart_data = q2_doacs_2020_01_01 
+      title_text = "Multivariate results for DOACs vs warfarin Jan 2020"
+    }else if (medication == "DOACs vs warfarin" & date == "May 2021") { 
+      chart_data = q2_doacs_2021_05_01 
+      title_text = "Multivariate results for DOACs vs warfarin May 2021"
+    }else { }
+    
+    # chart_data = q2_any_at_2020_01_01
+    # title_text = "Multivariate results for Any AT"
+    
+    ggplot(data = chart_data, aes(x=var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) + 
+      geom_pointrange() +
+      geom_hline(yintercept=1, lty=2) +
+      coord_flip() +
+      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
+    
+    
+  })
   
 }
 
