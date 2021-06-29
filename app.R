@@ -1,6 +1,7 @@
 library(shiny)
 library(dplyr)
 library(ggplot2)
+library(DT)
 
 
 #TO-DO list:
@@ -9,7 +10,7 @@ library(ggplot2)
 # - Q1 results -> medication category vs individual medication -> (2 options)
   #replace bar chart images with raw data
 # - Q2 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020 and May 2021 (2 options - maybe 4) -> (min. 6 options, possibly 12)
-  #forest plots
+  #forest plots - update underlying data and add facet groups to chart design
   #table of ORs and p-values
 # - Q3 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020-May 2021 and Jan 2020-Dec 2020 (2 options) for multivariable basic, propensity and Cox (3 options) -> (18 options) 
   #comparison forest plots
@@ -19,6 +20,31 @@ library(ggplot2)
 #OPTIONAL / FOR REVIEW
 # - additional option for summary characteristics table under Q1
 # - additional option for summary characteristics table under Q3
+
+select_q2_data = function(medication, date, q2_results){
+  if (medication == "AT vs no AT" & date == "Jan 2020"){ 
+    chart_data = q2_results[[1]] 
+    title_text = "Multivariate results for Any AT vs no AT Jan 2020"
+  }else if (medication == "AT vs no AT" & date == "May 2021") { 
+    chart_data = q2_results[[2]] 
+    title_text = "Multivariate results for Any AT vs no AT May 2021"
+  }else if (medication == "AC vs AP" & date == "Jan 2020") { 
+    chart_data = q2_results[[3]] 
+    title_text = "Multivariate results for AC vs AP Jan 2020"
+  }else if (medication == "AC vs AP" & date == "May 2021") { 
+    chart_data = q2_results[[4]] 
+    title_text = "Multivariate results for AC vs AP May 2021"
+  }else if (medication == "DOACs vs warfarin" & date == "Jan 2020") { 
+    chart_data = q2_results[[5]] 
+    title_text = "Multivariate results for DOACs vs warfarin Jan 2020"
+  }else if (medication == "DOACs vs warfarin" & date == "May 2021") { 
+    chart_data = q2_results[[6]] 
+    title_text = "Multivariate results for DOACs vs warfarin May 2021"
+  }else { }
+  
+  return_objs = list(chart_data, title_text)
+  return(return_objs)
+}
 
 ui <- fluidPage(
   titlePanel(""),
@@ -70,7 +96,11 @@ ui <- fluidPage(
         
         conditionalPanel(
           condition = "input.question == 'Question 2: AT use factors'",
-          plotOutput("q2_plot")
+          plotOutput("q2_plot"),
+          br(),
+          br(),
+          br(),
+          DT::dataTableOutput("q2_table")
         ),
       )
       
@@ -105,12 +135,23 @@ server <- function(input, output) {
   #Load data for q2
   
   q2_any_at_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2020_01_01_14_06_2021.csv", header=T)
-  q2_ac_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2020_01_01_14_06_2021.csv", header=T)
-  q2_doacs_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2020_01_01_14_06_2021.csv", header=T)
-  
   q2_any_at_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2021_04_01_14_06_2021.csv", header=T)
+  
+  q2_ac_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2020_01_01_14_06_2021.csv", header=T)
   q2_ac_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2021_04_01_14_06_2021.csv", header=T)
+  
+  q2_doacs_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2020_01_01_14_06_2021.csv", header=T)
   q2_doacs_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2021_04_01_14_06_2021.csv", header=T)
+  
+  q2_results_list = list(
+    q2_any_at_2020_01_01,
+    q2_any_at_2021_05_01,
+    q2_ac_2020_01_01,
+    q2_ac_2021_05_01,
+    q2_doacs_2020_01_01,
+    q2_doacs_2021_05_01
+  )
+
   
   #TABLES NEED TO BE UPDATED AND EXPORTED
   #ADD IN LATEST CHART CODE WHICH WILL INCLUDE FACET GROUPS
@@ -119,31 +160,11 @@ server <- function(input, output) {
     #add if statement for years and medication category
     medication = input$medication
     date = input$start_date
-    print(medication)
-    print(date)
     
-    if (medication == "AT vs no AT" & date == "Jan 2020"){ 
-      chart_data = q2_any_at_2020_01_01 
-      title_text = "Multivariate results for Any AT vs no AT Jan 2020"
-    }else if (medication == "AT vs no AT" & date == "May 2021") { 
-      chart_data = q2_any_at_2021_05_01 
-      title_text = "Multivariate results for Any AT vs no AT May 2021"
-    }else if (medication == "AC vs AP" & date == "Jan 2020") { 
-      chart_data = q2_ac_2020_01_01 
-      title_text = "Multivariate results for AC vs AP Jan 2020"
-    }else if (medication == "AC vs AP" & date == "May 2021") { 
-      chart_data = q2_ac_2021_05_01 
-      title_text = "Multivariate results for AC vs AP May 2021"
-    }else if (medication == "DOACs vs warfarin" & date == "Jan 2020") { 
-      chart_data = q2_doacs_2020_01_01 
-      title_text = "Multivariate results for DOACs vs warfarin Jan 2020"
-    }else if (medication == "DOACs vs warfarin" & date == "May 2021") { 
-      chart_data = q2_doacs_2021_05_01 
-      title_text = "Multivariate results for DOACs vs warfarin May 2021"
-    }else { }
+    outputs = select_q2_data(medication, date, q2_results_list)
     
-    # chart_data = q2_any_at_2020_01_01
-    # title_text = "Multivariate results for Any AT"
+    chart_data = outputs[[1]]
+    title_text = outputs[[2]]
     
     ggplot(data = chart_data, aes(x=var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) + 
       geom_pointrange() +
@@ -152,6 +173,23 @@ server <- function(input, output) {
       xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
     
     
+  })
+  
+  output$q2_table = DT::renderDataTable({
+    
+    medication = input$medication
+    date = input$start_date
+    
+    outputs = select_q2_data(medication, date, q2_results_list)
+    
+    chart_data = outputs[[1]]
+    title_text = outputs[[2]]
+    
+    headers <- c("Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
+    headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
+    colnames(chart_data) <- headers
+    #Consider updating input data so p-values replaced with <0.01 if 0.00 (to support presentation)
+    DT::datatable(chart_data, rownames = F) %>% DT::formatRound(headers_decimals, 2)
   })
   
 }
