@@ -5,6 +5,12 @@ library(DT)
 
 
 #TO-DO list:
+
+#Sum
+#- update underlying data
+#- adjust formatting of charts and tables to align with updated data (e.g. facet groups)
+#- review whether add any other exhibits (e.g. summary characteristics)
+
 # - Q1 results -> medication category vs individual medication -> (2 options)
   #replace bar chart images with raw data
 # - Q2 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020 and May 2021 (2 options - maybe 4) -> (min. 6 options, possibly 12)
@@ -13,13 +19,14 @@ library(DT)
 # - Q3 results -> 
   #Summary (2 times x 3 methods = 6 options) comparison plots -> pending log regression + replace plots with underlying data
   #Full (3 meds x 3 methods x 2 times x 2 outcomes = 36)
-    #individual forest plots (would have to add another 2 options -> COVID-19 death vs COVID-19 hospitalisation -> 36 in total)
-    #table of ORs and p-values
+    #individual forest plots  - update underlying data and add facet groups to chart design
+    #table of ORs and p-values - update underlying data and column headers (consider adjusting p-value presentation)
 
 #OPTIONAL / FOR REVIEW
 # - additional option for summary characteristics table under Q1
 # - additional option for summary characteristics table under Q3
 # - add in correlation maps for Q2 and Q3
+# - factor all code so its the file assembly method
 
 select_q2_data = function(medication, date, q2_results){
   if (medication == "AT vs no AT" & date == "Jan 2020"){ 
@@ -43,6 +50,44 @@ select_q2_data = function(medication, date, q2_results){
   }else { }
   
   return_objs = list(chart_data, title_text)
+  return(return_objs)
+}
+
+select_full_q3_data = function(medication, outcome, time_period, method){
+  
+  #medication
+  if (medication == "AT vs no AT") {
+    med_file = "any_at"
+  } else if (medication == "AC vs AP") {
+    med_file = "ac_only"
+  } else if (medication == "DOACs vs warfarin") {
+    med_file = "doacs"
+  } else {}
+  
+  #outcome
+  if (outcome == "COVID-19 death") {
+    outcome_file = "death"
+  } else if (outcome == "COVID-19 hospitalisation"){
+    outcome_file = "hospitalisation"
+  } else {}
+  
+  #time period - requires format update for new data
+  if (time_period == "Jan 2020 - May 2021") {
+    time_file = "2020_01_01"
+  } else if (time_period == "Jan 2020 - Dec 2020") {
+    time_file = "2020_01_01"
+  }
+  
+  #method
+  if (method == "Logistic regression") {
+    method_file = "basic"
+  } else if (method == "Logistic regression (adj. propensity score)") {
+    method_file = "prop"
+  } else if (method == "Cox regression") {
+    method_file = "cox"
+  } else {}
+  
+  return_objs = list(med_file, outcome_file, time_file, method_file)
   return(return_objs)
 }
 
@@ -142,8 +187,8 @@ ui <- fluidPage(
           plotOutput("q3_full_plot"),
           br(),
           br(),
-          br()
-          #DT::dataTableOutput("q3_table")
+          br(),
+          DT::dataTableOutput("q3_full_table")
         ),
         
       )
@@ -283,45 +328,17 @@ server <- function(input, output) {
     time_period = input$time_period
     method = input$method
     
-    #convert inputs to file text snippets (review abstracting to function)
+    #convert inputs to file text snippets
+    q3_outputs = select_full_q3_data(medication, outcome, time_period, method)
     
-    #medication
-    if (medication == "AT vs no AT") {
-      med_file = "any_at"
-    } else if (medication == "AC vs AP") {
-      med_file = "ac_only"
-    } else if (medication == "DOACs vs warfarin") {
-      med_file = "doacs"
-    } else {}
-    
-    #outcome
-    if (outcome == "COVID-19 death") {
-      outcome_file = "death"
-    } else if (outcome == "COVID-19 hospitalisation"){
-      outcome_file = "hospitalisation"
-    } else {}
-    
-    #time period - requires format update for new data
-    if (time_period == "Jan 2020 - May 2021") {
-      time_file = "2020_01_01"
-    } else if (time_period == "Jan 2020 - Dec 2020") {
-      time_file = "2020_01_01"
-    }
-    
-    #method
-    #TO-DO: review file naming convention in updated exports (e.g. change log regression to basic - fixes error on log regression)
-    if (method == "Logistic regression") {
-      method_file = ""
-    } else if (method == "Logistic regression (adj. propensity score)") {
-      method_file = "prop"
-    } else if (method == "Cox regression") {
-      method_file = "cox"
-    } else {}
+    med_file = q3_outputs[[1]]
+    outcome_file = q3_outputs[[2]]
+    time_file = q3_outputs[[3]]
+    method_file = q3_outputs[[4]]
     
     #assemble and load the file
     file_date = "_14_06_2021"
     data_file = paste("results/q3_at_covid/covid_multivariate_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
-    print(data_file)
     
     #load data
     chart_data = read.csv(data_file, header=T)
@@ -334,6 +351,36 @@ server <- function(input, output) {
       coord_flip() +
       xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
     
+  })
+  
+  output$q3_full_table = DT::renderDataTable({
+    
+    #get inputs
+    medication = input$medication
+    outcome = input$outcome
+    time_period = input$time_period
+    method = input$method
+    
+    #convert inputs to file text snippets
+    q3_outputs = select_full_q3_data(medication, outcome, time_period, method)
+    
+    med_file = q3_outputs[[1]]
+    outcome_file = q3_outputs[[2]]
+    time_file = q3_outputs[[3]]
+    method_file = q3_outputs[[4]]
+    
+    #assemble and load the file
+    file_date = "_14_06_2021"
+    data_file = paste("results/q3_at_covid/covid_multivariate_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
+    
+    #load data
+    chart_data = read.csv(data_file, header=T)
+    
+    headers <- c("Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
+    headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
+    colnames(chart_data) <- headers
+    #Consider updating input data so p-values replaced with <0.01 if 0.00 (to support presentation)
+    DT::datatable(chart_data, rownames = F) %>% DT::formatRound(headers_decimals, 2)
   })
   
 }
