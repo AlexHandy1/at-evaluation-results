@@ -5,21 +5,21 @@ library(DT)
 
 
 #TO-DO list:
-# - conditional project background page with summary bullets and study design overview and relevant links
 # - Q1 results -> medication category vs individual medication -> (2 options)
   #replace bar chart images with raw data
 # - Q2 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020 and May 2021 (2 options - maybe 4) -> (min. 6 options, possibly 12)
   #forest plots - update underlying data and add facet groups to chart design
   #table of ORs and p-values - update underlying data and column headers (consider adjusting p-value presentation)
-# - Q3 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020-May 2021 and Jan 2020-Dec 2020 (2 options) for multivariable basic, propensity and Cox (3 options) -> (18 options) 
-  #comparison forest plots - replace plots with underlying data
-  #individual forest plots (would have to add another 2 options -> COVID-19 death vs COVID-19 hospitalisation -> 36 in total)
-  #table of ORs and p-values
+# - Q3 results -> 
+  #Summary (2 times x 3 methods = 6 options) comparison plots -> pending log regression + replace plots with underlying data
+  #Full (3 meds x 3 methods x 2 times x 2 outcomes = 36)
+    #individual forest plots (would have to add another 2 options -> COVID-19 death vs COVID-19 hospitalisation -> 36 in total)
+    #table of ORs and p-values
 
 #OPTIONAL / FOR REVIEW
 # - additional option for summary characteristics table under Q1
 # - additional option for summary characteristics table under Q3
-# - add in tab for study inclusion criteria flow
+# - add in correlation maps for Q2 and Q3
 
 select_q2_data = function(medication, date, q2_results){
   if (medication == "AT vs no AT" & date == "Jan 2020"){ 
@@ -58,7 +58,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.intro == 'Results'",
           selectInput("question", strong("Show results for: "), 
-                      choices = c("Question 1: AT use","Question 2: AT use factors","Question 3: AT and COVID-19 outcomes"), selected = "Question 1: AT use"),
+                      choices = c("Cohort inclusion flow chart (Jan 2020)", "Question 1: AT use","Question 2: AT use factors","Question 3: AT and COVID-19 outcomes"), selected = "Question 1: AT use"),
         ),
         
         conditionalPanel(
@@ -107,11 +107,16 @@ ui <- fluidPage(
     mainPanel(
       conditionalPanel(
         condition = "input.intro == 'Project background'",
-        textOutput("hello")
+        htmlOutput("background")
       ),
       
       conditionalPanel(
         condition = "input.intro == 'Results'",
+        
+        conditionalPanel(
+          condition = "input.question == 'Cohort inclusion flow chart (Jan 2020)'",
+          imageOutput("cohort")
+        ),
         
         conditionalPanel(
           condition = "input.question == 'Question 1: AT use'",
@@ -132,6 +137,15 @@ ui <- fluidPage(
           imageOutput("q3_summary_plot")
         ),
         
+        conditionalPanel(
+          condition = "input.question == 'Question 3: AT and COVID-19 outcomes' &  input.summary == 'Full'",
+          plotOutput("q3_full_plot"),
+          br(),
+          br(),
+          br()
+          #DT::dataTableOutput("q3_table")
+        ),
+        
       )
       
     )
@@ -140,9 +154,23 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  output$hello = renderText({
-    "Hello world"
-  })
+  getBackground<-function() {
+    return(includeHTML("background.html"))
+  }
+  output$background <- renderUI({getBackground()})
+  
+  output$cohort = renderImage({
+    
+    image_file = "www/cohort_inclusion_chart.png"
+    
+    list(src = image_file,
+         contentType = 'image/png',
+         width = 600,
+         height = 600,
+         alt = "This is a cohort inclusion flow chart")
+  }, deleteFile = FALSE)
+  
+  
   
   #REPLACE WITH UNDERLYING CHART DATA
   output$q1 = renderImage({
@@ -222,9 +250,7 @@ server <- function(input, output) {
     DT::datatable(chart_data, rownames = F) %>% DT::formatRound(headers_decimals, 2)
   })
   
-  #Load data for q3
-  
-  
+
   output$q3_summary_plot = renderImage({
     
     
@@ -250,7 +276,68 @@ server <- function(input, output) {
     
   }, deleteFile = FALSE)
   
+  output$q3_full_plot = renderPlot({
+    #get inputs
+    medication = input$medication
+    outcome = input$outcome
+    time_period = input$time_period
+    method = input$method
+    
+    #convert inputs to file text snippets (review abstracting to function)
+    
+    #medication
+    if (medication == "AT vs no AT") {
+      med_file = "any_at"
+    } else if (medication == "AC vs AP") {
+      med_file = "ac_only"
+    } else if (medication == "DOACs vs warfarin") {
+      med_file = "doacs"
+    } else {}
+    
+    #outcome
+    if (outcome == "COVID-19 death") {
+      outcome_file = "death"
+    } else if (outcome == "COVID-19 hospitalisation"){
+      outcome_file = "hospitalisation"
+    } else {}
+    
+    #time period - requires format update for new data
+    if (time_period == "Jan 2020 - May 2021") {
+      time_file = "2020_01_01"
+    } else if (time_period == "Jan 2020 - Dec 2020") {
+      time_file = "2020_01_01"
+    }
+    
+    #method
+    #TO-DO: review file naming convention in updated exports (e.g. change log regression to basic - fixes error on log regression)
+    if (method == "Logistic regression") {
+      method_file = ""
+    } else if (method == "Logistic regression (adj. propensity score)") {
+      method_file = "prop"
+    } else if (method == "Cox regression") {
+      method_file = "cox"
+    } else {}
+    
+    #assemble and load the file
+    file_date = "_14_06_2021"
+    data_file = paste("results/q3_at_covid/covid_multivariate_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
+    print(data_file)
+    
+    #load data
+    chart_data = read.csv(data_file, header=T)
+    title_text = paste(method, "for", medication, "on", outcome, "between", time_period, sep = " ")
+      
+    #create chart
+    ggplot(data = chart_data, aes(x=var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) + 
+      geom_pointrange() +
+      geom_hline(yintercept=1, lty=2) +
+      coord_flip() +
+      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
+    
+  })
+  
 }
+
 
 # Run the application 
 shinyApp(ui = ui, server = server)
