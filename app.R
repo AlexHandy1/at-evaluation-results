@@ -6,23 +6,11 @@ library(RColorBrewer)
 
 
 #TO-DO list:
-
-#Sum
-#- update underlying data
-#- adjust formatting of charts and tables to align with updated data (e.g. facet groups)
+#tidy plot formatting (make top box have higher height)
 #- review whether add any other exhibits (e.g. summary characteristics)
-
-# - Q3 results -> 
-  #Summary (2 times x 3 methods = 6 options) comparison plots -> pending log regression + replace plots with underlying data
-  #Full (3 meds x 3 methods x 2 times x 2 outcomes = 36)
-    #individual forest plots  - update underlying data and add facet groups to chart design
-    #table of ORs and p-values - update underlying data and column headers (consider adjusting p-value presentation)
-
-#OPTIONAL / FOR REVIEW
-# - additional option for summary characteristics table under Q1
-# - additional option for summary characteristics table under Q3
-# - add in correlation maps for Q2 and Q3
-# - factor all code so its the file assembly method
+  # - additional option for summary characteristics table under Q1
+  # - additional option for summary characteristics table under Q3
+  # - add in correlation maps for Q2 and Q3
 
 select_q2_data = function(medication, start_date){
   
@@ -68,12 +56,12 @@ select_full_q3_data = function(medication, outcome, time_period, method){
     outcome_file = "hospitalisation"
   } else {}
   
-  #time period - requires format update for new data
+  #time period
   if (time_period == "Jan 2020 - May 2021") {
-    time_file = "2020_01_01"
+    time_file = "2020_01_01_2021_05_01"
   } else if (time_period == "Jan 2020 - Dec 2020") {
-    time_file = "2020_01_01"
-  }
+    time_file = "2020_01_01_2020_12_01"
+  } else {}
   
   #method
   if (method == "Logistic regression") {
@@ -290,30 +278,46 @@ server <- function(input, output) {
   })
   
 
-  output$q3_summary_plot = renderImage({
+  output$q3_summary_plot = renderPlot({
     
-    
-    method = input$method
     time_period = input$time_period
+    method = input$method
     
-    #will be updated and abstracted to function
-    if ( method == "Logistic regression (adj. propensity score)" & time_period == "Jan 2020 - May 2021"){
-      image_file = "www/covid_exp_comp_prop_forest_plot_2020_01_01_2021_05_01_24_06_2021.png"
-    } else if  ( method == "Logistic regression (adj. propensity score)" & time_period == "Jan 2020 - Dec 2020") {
-      image_file = "www/covid_exp_comp_prop_forest_plot_2020_01_01_2020_12_01_24_06_2021.png"
-    } else if ( method == "Cox regression" & time_period == "Jan 2020 - May 2021") {
-      image_file = "www/covid_exp_comp_cox_forest_plot_2020_01_01_2021_05_01_24_06_2021.png"
-    } else if ( method == "Cox regression" & time_period == "Jan 2020 - Dec 2020") {
-      image_file = "www/covid_exp_comp_cox_forest_plot_2020_01_01_2020_12_01_24_06_2021.png"
+    #time period
+    if (time_period == "Jan 2020 - May 2021") {
+      time_file = "2020_01_01_2021_05_01"
+    } else if (time_period == "Jan 2020 - Dec 2020") {
+      time_file = "2020_01_01_2020_12_01"
     } else {}
     
-    list(src = image_file,
-         contentType = 'image/png',
-         width = 700,
-         height = 500,
-         alt = "This is a bar chart")
+    #method
+    if (method == "Logistic regression") {
+      method_file = "basic"
+    } else if (method == "Logistic regression (adj. propensity score)") {
+      method_file = "prop"
+    } else if (method == "Cox regression") {
+      method_file = "cox"
+    } else {}
     
-  }, deleteFile = FALSE)
+    #assemble and load the file
+    file_date = "_02_07_2021"
+    data_file = paste("results/q3_at_covid/covid_exp_comp_", method_file, "_forest_plot_table_",time_file, file_date, ".csv", sep="")
+    
+    #load data
+    chart_data = read.csv(data_file, header=T)
+    title_text = paste("Comparison of exposures on COVID-19 outcomes (", method, ") for ", time_period, sep = "")
+    
+    exposures_ordered = c("DOACs vs warfarin", "AC vs AP", "Any AT vs no AT")
+    chart_data$clean_var <-factor(chart_data$clean_var, levels=exposures_ordered)
+    
+    ggplot(data=chart_data, aes(x=clean_var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) +
+      geom_pointrange() +
+      facet_grid(outcome~., scales= "free", space="free") +
+      geom_hline(yintercept=1, lty=2) + 
+      coord_flip() + 
+      xlab("Exposure") + ylab("Hazard Ratio (95% CI)") + labs(title = title_text) + geom_text(label=round(chart_data$or, 2), nudge_x=0.2) + theme_bw()
+    
+  })
   
   output$q3_full_plot = renderPlot({
     #get inputs
@@ -331,19 +335,26 @@ server <- function(input, output) {
     method_file = q3_outputs[[4]]
     
     #assemble and load the file
-    file_date = "_14_06_2021"
-    data_file = paste("results/q3_at_covid/covid_multivariate_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
+    file_date = "_02_07_2021"
+    data_file = paste("results/q3_at_covid/covid_multivariable_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
     
     #load data
     chart_data = read.csv(data_file, header=T)
     title_text = paste(method, "for", medication, "on", outcome, "between", time_period, sep = " ")
-      
+    
+    if (method == "cox"){
+      y_label = "Hazard Ratio (95% CI)"
+    } else {
+      y_label = "Odds Ratio (95% CI)"
+    }
+    
     #create chart
-    ggplot(data = chart_data, aes(x=var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) + 
+    ggplot(data=chart_data, aes(x=clean_var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) +
       geom_pointrange() +
-      geom_hline(yintercept=1, lty=2) +
-      coord_flip() +
-      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
+      facet_grid(var_group~., scales= "free", space="free") +
+      geom_hline(yintercept=1, lty=2) + 
+      coord_flip() +  
+      xlab("Factor") + ylab(y_label) + labs(title = title_text, caption = "Reference categories , *<2 years since AF, **White ***IMD dec 1 ****South East") + theme_bw()
     
   })
   
@@ -364,13 +375,16 @@ server <- function(input, output) {
     method_file = q3_outputs[[4]]
     
     #assemble and load the file
-    file_date = "_14_06_2021"
-    data_file = paste("results/q3_at_covid/covid_multivariate_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
+    file_date = "_02_07_2021"
+    data_file = paste("results/q3_at_covid/covid_multivariable_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
     
     #load data
     chart_data = read.csv(data_file, header=T)
     
-    headers <- c("Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
+    #select target headers
+    chart_data = chart_data %>% select(c("var_group", "clean_var", "or","ci_or_lower","ci_or_upper","p"))
+    
+    headers <- c("Category", "Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
     headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
     colnames(chart_data) <- headers
     #Consider updating input data so p-values replaced with <0.01 if 0.00 (to support presentation)

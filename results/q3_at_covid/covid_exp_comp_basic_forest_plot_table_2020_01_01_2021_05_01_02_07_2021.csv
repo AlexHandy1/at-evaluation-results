@@ -1,0 +1,7 @@
+"","var","or","ci_or_lower","ci_or_upper","p","var_group","clean_var","outcome"
+"1","any_at",0.907941653933703,0.863261566071608,0.954934262507741,0.000176138602352949,"meds","Any AT vs no AT","covid death"
+"2","any_at",1.20122534601617,1.1479315770776,1.25699332671474,2.4044288940608e-15,"meds","Any AT vs no AT","covid hospitalisation"
+"3","ac_only",0.925445616115319,0.872195379779555,0.981946944735625,0.0103925687386895,"meds","AC vs AP","covid death"
+"4","ac_only",1.17497095099928,1.11338524026656,1.23996320928562,4.35767058874499e-09,"meds","AC vs AP","covid hospitalisation"
+"5","doacs",1.0052096233961,0.959749528046692,1.05282301000411,0.825824351595454,"meds","DOACs vs warfarin","covid death"
+"6","doacs",0.859745318374466,0.825466627373979,0.895447481406092,3.34800672961693e-13,"meds","DOACs vs warfarin","covid hospitalisation"
