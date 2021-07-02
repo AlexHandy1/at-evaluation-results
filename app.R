@@ -12,11 +12,6 @@ library(RColorBrewer)
 #- adjust formatting of charts and tables to align with updated data (e.g. facet groups)
 #- review whether add any other exhibits (e.g. summary characteristics)
 
-# - Q1 results -> medication category vs individual medication -> (2 options)
-  #replace bar chart images with raw data
-# - Q2 results -> AT vs no AT, AC vs AP, DOACs vs Warfarin (3 options) for Jan 2020 and May 2021 (2 options - maybe 4) -> (min. 6 options, possibly 12)
-  #forest plots - update underlying data and add facet groups to chart design
-  #table of ORs and p-values - update underlying data and column headers (consider adjusting p-value presentation)
 # - Q3 results -> 
   #Summary (2 times x 3 methods = 6 options) comparison plots -> pending log regression + replace plots with underlying data
   #Full (3 meds x 3 methods x 2 times x 2 outcomes = 36)
@@ -29,28 +24,29 @@ library(RColorBrewer)
 # - add in correlation maps for Q2 and Q3
 # - factor all code so its the file assembly method
 
-select_q2_data = function(medication, date, q2_results){
-  if (medication == "AT vs no AT" & date == "Jan 2020"){ 
-    chart_data = q2_results[[1]] 
-    title_text = "Multivariate results for Any AT vs no AT Jan 2020"
-  }else if (medication == "AT vs no AT" & date == "May 2021") { 
-    chart_data = q2_results[[2]] 
-    title_text = "Multivariate results for Any AT vs no AT May 2021"
-  }else if (medication == "AC vs AP" & date == "Jan 2020") { 
-    chart_data = q2_results[[3]] 
-    title_text = "Multivariate results for AC vs AP Jan 2020"
-  }else if (medication == "AC vs AP" & date == "May 2021") { 
-    chart_data = q2_results[[4]] 
-    title_text = "Multivariate results for AC vs AP May 2021"
-  }else if (medication == "DOACs vs warfarin" & date == "Jan 2020") { 
-    chart_data = q2_results[[5]] 
-    title_text = "Multivariate results for DOACs vs warfarin Jan 2020"
-  }else if (medication == "DOACs vs warfarin" & date == "May 2021") { 
-    chart_data = q2_results[[6]] 
-    title_text = "Multivariate results for DOACs vs warfarin May 2021"
-  }else { }
+select_q2_data = function(medication, start_date){
   
-  return_objs = list(chart_data, title_text)
+  #medication
+  if (medication == "AT vs no AT") {
+    med_file = "any_at"
+  } else if (medication == "AC vs AP") {
+    med_file = "ac_only"
+  } else if (medication == "DOACs vs warfarin") {
+    med_file = "doacs"
+  } else {}
+  
+  #date
+  if (start_date == "Jan 2020") {
+    start_date_file = "2020_01_01"
+  } else if (start_date == "Jul 2020") {
+    start_date_file = "2020_07_01"
+  }else if (start_date == "Jan 2021") {
+    start_date_file = "2021_01_01"
+  }else if (start_date == "May 2021") {
+    start_date_file = "2021_05_01"
+  } else {}
+  
+  return_objs = list(med_file, start_date_file)
   return(return_objs)
 }
 
@@ -127,7 +123,7 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.question == 'Question 2: AT use factors'",
           selectInput("start_date", strong("Date"), 
-                      choices = c("Jan 2020", "May 2021"), selected = "Jan 2020"),
+                      choices = c("Jan 2020", "Jul 2020", "Jan 2021", "May 2021"), selected = "Jan 2020"),
         ),
         
         conditionalPanel(
@@ -238,60 +234,55 @@ server <- function(input, output) {
     
   })
   
-  #Load data for q2
-  
-  q2_any_at_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2020_01_01_14_06_2021.csv", header=T)
-  q2_any_at_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_any_at_2021_04_01_14_06_2021.csv", header=T)
-  
-  q2_ac_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2020_01_01_14_06_2021.csv", header=T)
-  q2_ac_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_ac_only_2021_04_01_14_06_2021.csv", header=T)
-  
-  q2_doacs_2020_01_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2020_01_01_14_06_2021.csv", header=T)
-  q2_doacs_2021_05_01 = read.csv("results/q2_at_factors/factor_multivariate_res_table_doacs_2021_04_01_14_06_2021.csv", header=T)
-  
-  q2_results_list = list(
-    q2_any_at_2020_01_01,
-    q2_any_at_2021_05_01,
-    q2_ac_2020_01_01,
-    q2_ac_2021_05_01,
-    q2_doacs_2020_01_01,
-    q2_doacs_2021_05_01
-  )
-
-  
-  #TABLES NEED TO BE UPDATED AND EXPORTED
-  #ADD IN LATEST CHART CODE WHICH WILL INCLUDE FACET GROUPS
   output$q2_plot = renderPlot({
     
-    #add if statement for years and medication category
+    #get inputs
     medication = input$medication
-    date = input$start_date
+    start_date = input$start_date
     
-    outputs = select_q2_data(medication, date, q2_results_list)
+    #convert inputs to file text snippets
+    q2_outputs = select_q2_data(medication, start_date)
+    med_file = q2_outputs[[1]]
+    start_date_file = q2_outputs[[2]]
     
-    chart_data = outputs[[1]]
-    title_text = outputs[[2]]
+    #assemble and load the file
+    file_date = "_02_07_2021"
+    data_file = paste("results/q2_at_factors/factor_multivariable_res_table_", med_file, "_", start_date_file, file_date, ".csv", sep="")
     
-    ggplot(data = chart_data, aes(x=var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) + 
+    #load data
+    chart_data = read.csv(data_file, header=T)
+    title_text = paste("Multivariable results for", medication, "at", start_date, sep = " ")
+    
+    ggplot(data=chart_data, aes(x=clean_var, y=or, ymin=ci_or_lower, ymax=ci_or_upper)) +
       geom_pointrange() +
-      geom_hline(yintercept=1, lty=2) +
-      coord_flip() +
-      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories, *<2years since AF **White ***IMD dec 1 ****South East") + theme_bw()
-    
+      facet_grid(var_group~., scales= "free", space="free") +
+      geom_hline(yintercept=1, lty=2) + 
+      coord_flip() +  
+      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories , *<2 years since AF, **White ***IMD dec 1 ****South East") + theme_bw()
     
   })
   
   output$q2_table = DT::renderDataTable({
-    
+    #get inputs
     medication = input$medication
-    date = input$start_date
+    start_date = input$start_date
     
-    outputs = select_q2_data(medication, date, q2_results_list)
+    #convert inputs to file text snippets
+    q2_outputs = select_q2_data(medication, start_date)
+    med_file = q2_outputs[[1]]
+    start_date_file = q2_outputs[[2]]
     
-    chart_data = outputs[[1]]
-    title_text = outputs[[2]]
+    #assemble and load the file
+    file_date = "_02_07_2021"
+    data_file = paste("results/q2_at_factors/factor_multivariable_res_table_", med_file, "_", start_date_file, file_date, ".csv", sep="")
     
-    headers <- c("Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
+    #load data
+    chart_data = read.csv(data_file, header=T)
+    
+    #select target headers
+    chart_data = chart_data %>% select(c("var_group", "clean_var", "or","ci_or_lower","ci_or_upper","p"))
+    
+    headers <- c("Category", "Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
     headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
     colnames(chart_data) <- headers
     #Consider updating input data so p-values replaced with <0.01 if 0.00 (to support presentation)
