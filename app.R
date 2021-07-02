@@ -2,6 +2,7 @@ library(shiny)
 library(dplyr)
 library(ggplot2)
 library(DT)
+library(RColorBrewer)
 
 
 #TO-DO list:
@@ -165,7 +166,7 @@ ui <- fluidPage(
         
         conditionalPanel(
           condition = "input.question == 'Question 1: AT use'",
-          imageOutput("q1")
+          plotOutput("q1")
         ),
         
         conditionalPanel(
@@ -216,24 +217,26 @@ server <- function(input, output) {
   }, deleteFile = FALSE)
   
   
-  
-  #REPLACE WITH UNDERLYING CHART DATA
-  output$q1 = renderImage({
-    
+  output$q1 = renderPlot({
     category = input$category
-    
     if (category == "by category"){
-      image_file = "www/prescribing_trends_cat_23_06_2021.jpg"
-    } else {
-      image_file = "www/prescribing_trends_ind_23_06_2021.jpg"
-    }
-
-    list(src = image_file,
-         contentType = 'image/jpeg',
-         width = 700,
-         height = 500,
-         alt = "This is a bar chart")
-  }, deleteFile = FALSE)
+        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_cat_02_07_2021.csv", header=T)
+        title_text = "Individual antithrombotic prescriptions by category Jan 2020 - May 2021"
+      } else {
+        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_ind_02_07_2021.csv", header=T)
+        title_text = "Individual antithrombotic prescriptions by drug Jan 2020 - May 2021"
+      }
+    
+    #order by largest drug category first
+    chart_data$Drug.category <- reorder(chart_data$Drug.category, chart_data$individuals_pct)
+    chart_data$Drug.category <- factor(chart_data$Drug.category, levels=levels(chart_data$Drug.category))
+    
+    #tidy labelling
+    colnames(chart_data)[3] = "Drug category"
+    
+    ggplot(chart_data, aes(y = individuals_n, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + stat_summary(fun = sum, aes(label = ..y.., group = time_index, vjust = -.5), geom = "text") + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    
+  })
   
   #Load data for q2
   
