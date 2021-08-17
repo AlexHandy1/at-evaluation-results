@@ -301,6 +301,12 @@ server <- function(input, output) {
     chart_data = read.csv(data_file, header=T)
     title_text = paste("Comparison of exposures on COVID-19 outcomes (", method, ") for ", time_period, sep = "")
     
+    if (method == "Cox regression"){
+      y_label = "Hazard Ratio (95% CI)"
+    } else {
+      y_label = "Odds Ratio (95% CI)"
+    }
+    
     exposures_ordered = c("DOACs vs warfarin", "AC vs AP", "Any AT vs no AT")
     chart_data$clean_var <-factor(chart_data$clean_var, levels=exposures_ordered)
     
@@ -309,7 +315,7 @@ server <- function(input, output) {
       facet_grid(outcome~., scales= "free", space="free") +
       geom_hline(yintercept=1, lty=2) + 
       coord_flip() + 
-      xlab("Exposure") + ylab("Hazard Ratio (95% CI)") + labs(title = title_text) + geom_text(label=round(chart_data$or, 2), nudge_x=0.2) + theme_bw()
+      xlab("Exposure") + ylab(y_label) + labs(title = title_text) + geom_text(label=round(chart_data$or, 2), nudge_x=0.2) + theme_bw()
     
   })
   
@@ -336,7 +342,7 @@ server <- function(input, output) {
     chart_data = read.csv(data_file, header=T)
     title_text = paste(method, "for", medication, "on", outcome, "between", time_period, sep = " ")
     
-    if (method == "cox"){
+    if (method == "Cox regression"){
       y_label = "Hazard Ratio (95% CI)"
     } else {
       y_label = "Odds Ratio (95% CI)"
