@@ -4,14 +4,6 @@ library(ggplot2)
 library(DT)
 library(RColorBrewer)
 
-
-#TO-DO list:
-#tidy plot formatting (make top box have higher height)
-#- review whether add any other exhibits (e.g. summary characteristics)
-  # - additional option for summary characteristics table under Q1
-  # - additional option for summary characteristics table under Q3
-  # - add in correlation maps for Q2 and Q3
-
 select_q2_data = function(medication, start_date){
   
   #medication
@@ -52,9 +44,13 @@ select_full_q3_data = function(medication, outcome, time_period, method){
   #outcome
   if (outcome == "COVID-19 death") {
     outcome_file = "death"
+  }else if (outcome == "COVID-19 death (primary diagnosis)"){
+    outcome_file = "death_primary_dx"
   } else if (outcome == "COVID-19 hospitalisation"){
     outcome_file = "hospitalisation"
-  } else {}
+  } else if (outcome == "COVID-19 hospitalisation (primary diagnosis)"){
+    outcome_file = "hospitalisation_primary_dx"
+  }else {}
   
   #time period
   if (time_period == "Jan 2020 - May 2021") {
@@ -64,9 +60,7 @@ select_full_q3_data = function(medication, outcome, time_period, method){
   } else {}
   
   #method
-  if (method == "Logistic regression") {
-    method_file = "basic"
-  } else if (method == "Logistic regression (adj. propensity score)") {
+  if (method == "Logistic regression (adj. propensity score)") {
     method_file = "prop"
   } else if (method == "Cox regression") {
     method_file = "cox"
@@ -77,6 +71,7 @@ select_full_q3_data = function(medication, outcome, time_period, method){
 }
 
 ui <- fluidPage(
+  includeCSS("custom.css"),
   titlePanel(""),
   sidebarLayout(
     sidebarPanel(
@@ -88,48 +83,48 @@ ui <- fluidPage(
         conditionalPanel(
           condition = "input.intro == 'Results'",
           selectInput("question", strong("Show results for: "), 
-                      choices = c("Cohort inclusion flow chart (Jan 2020)", "Question 1: AT use","Question 2: AT use factors","Question 3: AT and COVID-19 outcomes"), selected = "Question 1: AT use"),
+                      choices = c("Cohort inclusion flow chart (Jan 2020)", "AT use coverage","AT use factors","AT and COVID-19 outcomes"), selected = "AT use coverage"),
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 1: AT use'",
+          condition = "input.question == 'AT use coverage'",
           selectInput("category", strong("Chart type"), 
-                      choices = c("by category","by drug"), selected = "by AT category"),
+                      choices = c("by category","by drug"), selected = "by category"),
         ), 
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes'",
+          condition = "input.question == 'AT and COVID-19 outcomes'",
           selectInput("summary", strong("Summary or full results"), 
                       choices = c("Summary", "Full"), selected = "Summary"),
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 2: AT use factors' | (input.question == 'Question 3: AT and COVID-19 outcomes' &  input.summary == 'Full')",
+          condition = "input.question == 'AT use factors' | (input.question == 'AT and COVID-19 outcomes' &  input.summary == 'Full')",
           selectInput("medication", strong("Medication comparison"), 
                       choices = c("AT vs no AT","AC vs AP", "DOACs vs warfarin"), selected = "AT vs no AT"),
         ), 
-        conditionalPanel(
-          condition = "input.question == 'Question 2: AT use factors'",
-          selectInput("start_date", strong("Date"), 
-                      choices = c("Jan 2020", "Jul 2020", "Jan 2021", "May 2021"), selected = "Jan 2020"),
-        ),
+        # conditionalPanel(
+        #   condition = "input.question == 'AT use factors'",
+        #   selectInput("start_date", strong("Date"), 
+        #               choices = c("Jan 2020", "Jul 2020", "Jan 2021", "May 2021"), selected = "Jan 2020"),
+        # ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes' & input.summary == 'Full'",
+          condition = "input.question == 'AT and COVID-19 outcomes' & input.summary == 'Full'",
           selectInput("outcome", strong("Outcome"), 
-                      choices = c("COVID-19 death", "COVID-19 hospitalisation"), selected = "COVID-19 death"),
+                      choices = c("COVID-19 death", "COVID-19 hospitalisation", "COVID-19 death (primary diagnosis)", "COVID-19 hospitalisation (primary diagnosis)"), selected = "COVID-19 death"),
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes'",
+          condition = "input.question == 'AT and COVID-19 outcomes'",
           selectInput("time_period", strong("Time Period"), 
                       choices = c("Jan 2020 - May 2021", "Jan 2020 - Dec 2020"), selected = "Jan 2020 - May 2021"),
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes'",
+          condition = "input.question == 'AT and COVID-19 outcomes'",
           selectInput("method", strong("Method"), 
-                      choices = c("Logistic regression", "Logistic regression (adj. propensity score)", "Cox regression"), selected = "Logistic regression (adj. propensity score)"),
+                      choices = c("Logistic regression (adj. propensity score)", "Cox regression"), selected = "Logistic regression (adj. propensity score)"),
         ),
       ),
       
@@ -149,13 +144,13 @@ ui <- fluidPage(
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 1: AT use'",
+          condition = "input.question == 'AT use coverage'",
           plotOutput("q1")
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 2: AT use factors'",
-          plotOutput("q2_plot"),
+          condition = "input.question == 'AT use factors'",
+          plotOutput("q2_plot", height = "100%"),
           br(),
           br(),
           br(),
@@ -163,13 +158,13 @@ ui <- fluidPage(
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes' &  input.summary == 'Summary'",
+          condition = "input.question == 'AT and COVID-19 outcomes' &  input.summary == 'Summary'",
           imageOutput("q3_summary_plot")
         ),
         
         conditionalPanel(
-          condition = "input.question == 'Question 3: AT and COVID-19 outcomes' &  input.summary == 'Full'",
-          plotOutput("q3_full_plot"),
+          condition = "input.question == 'AT and COVID-19 outcomes' &  input.summary == 'Full'",
+          plotOutput("q3_full_plot", height = "100%"),
           br(),
           br(),
           br(),
@@ -204,10 +199,10 @@ server <- function(input, output) {
   output$q1 = renderPlot({
     category = input$category
     if (category == "by category"){
-        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_cat_02_07_2021.csv", header=T)
+        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_cat_16_08_2021.csv", header=T)
         title_text = "Individual antithrombotic prescriptions by category Jan 2020 - May 2021"
       } else {
-        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_ind_02_07_2021.csv", header=T)
+        chart_data = read.csv("results/q1_at_use/table_for_all_time_indices_chart_ind_16_08_2021.csv", header=T)
         title_text = "Individual antithrombotic prescriptions by drug Jan 2020 - May 2021"
       }
     
@@ -218,15 +213,15 @@ server <- function(input, output) {
     #tidy labelling
     colnames(chart_data)[3] = "Drug category"
     
-    ggplot(chart_data, aes(y = individuals_n, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + stat_summary(fun = sum, aes(label = ..y.., group = time_index, vjust = -.5), geom = "text") + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
-    
-  })
+    ggplot(chart_data, aes(y = individuals_n, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+  }, width = 1000, height = 800)
   
   output$q2_plot = renderPlot({
     
     #get inputs
     medication = input$medication
-    start_date = input$start_date
+    #NOTE: keep structure in case want to add other time points back in
+    start_date = "Jan 2020"
     
     #convert inputs to file text snippets
     q2_outputs = select_q2_data(medication, start_date)
@@ -234,7 +229,7 @@ server <- function(input, output) {
     start_date_file = q2_outputs[[2]]
     
     #assemble and load the file
-    file_date = "_02_07_2021"
+    file_date = "_16_08_2021"
     data_file = paste("results/q2_at_factors/factor_multivariable_res_table_", med_file, "_", start_date_file, file_date, ".csv", sep="")
     
     #load data
@@ -246,14 +241,15 @@ server <- function(input, output) {
       facet_grid(var_group~., scales= "free", space="free") +
       geom_hline(yintercept=1, lty=2) + 
       coord_flip() +  
-      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories , *<2 years since AF, **White ***IMD dec 1 ****South East") + theme_bw()
+      xlab("Factor") + ylab("Odds Ratio (95% CI)") + labs(title = title_text, caption = "Reference categories , 1) White 2) IMD decile 10 (least deprived) 3) South East") + theme_bw()
     
-  })
+  },width = 650, height = 800)
   
   output$q2_table = DT::renderDataTable({
     #get inputs
     medication = input$medication
-    start_date = input$start_date
+    #NOTE: keep structure in case want to add other time points back in
+    start_date = "Jan 2020"
     
     #convert inputs to file text snippets
     q2_outputs = select_q2_data(medication, start_date)
@@ -261,7 +257,7 @@ server <- function(input, output) {
     start_date_file = q2_outputs[[2]]
     
     #assemble and load the file
-    file_date = "_02_07_2021"
+    file_date = "_16_08_2021"
     data_file = paste("results/q2_at_factors/factor_multivariable_res_table_", med_file, "_", start_date_file, file_date, ".csv", sep="")
     
     #load data
@@ -291,16 +287,14 @@ server <- function(input, output) {
     } else {}
     
     #method
-    if (method == "Logistic regression") {
-      method_file = "basic"
-    } else if (method == "Logistic regression (adj. propensity score)") {
+    if (method == "Logistic regression (adj. propensity score)") {
       method_file = "prop"
     } else if (method == "Cox regression") {
       method_file = "cox"
     } else {}
     
     #assemble and load the file
-    file_date = "_02_07_2021"
+    file_date = "_16_08_2021"
     data_file = paste("results/q3_at_covid/covid_exp_comp_", method_file, "_forest_plot_table_",time_file, file_date, ".csv", sep="")
     
     #load data
@@ -335,7 +329,7 @@ server <- function(input, output) {
     method_file = q3_outputs[[4]]
     
     #assemble and load the file
-    file_date = "_02_07_2021"
+    file_date = "_16_08_2021"
     data_file = paste("results/q3_at_covid/covid_multivariable_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
     
     #load data
@@ -354,9 +348,9 @@ server <- function(input, output) {
       facet_grid(var_group~., scales= "free", space="free") +
       geom_hline(yintercept=1, lty=2) + 
       coord_flip() +  
-      xlab("Factor") + ylab(y_label) + labs(title = title_text, caption = "Reference categories , *<2 years since AF, **White ***IMD dec 1 ****South East") + theme_bw()
+      xlab("Factor") + ylab(y_label) + labs(title = title_text, caption = "Reference categories , 1) White 2) IMD decile 10 (least deprived) 3) South East") + theme_bw()
     
-  })
+  }, width = 950, height = 950)
   
   output$q3_full_table = DT::renderDataTable({
     
@@ -375,7 +369,7 @@ server <- function(input, output) {
     method_file = q3_outputs[[4]]
     
     #assemble and load the file
-    file_date = "_02_07_2021"
+    file_date = "_16_08_2021"
     data_file = paste("results/q3_at_covid/covid_multivariable_res_", method_file, "_table_", med_file, "_covid_", outcome_file, "_", time_file, file_date, ".csv", sep="")
     
     #load data
