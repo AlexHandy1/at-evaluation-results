@@ -384,8 +384,13 @@ server <- function(input, output) {
     #select target headers
     chart_data = chart_data %>% select(c("var_group", "clean_var", "or","ci_or_lower","ci_or_upper","p"))
     
-    headers <- c("Category", "Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
-    headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
+    if (method == "Cox regression"){
+      headers <- c("Category", "Factor", "HR", "95% CI Lower", "95% CI Upper", "P-value")
+      headers_decimals <- c("HR", "95% CI Lower", "95% CI Upper", "P-value")
+    } else {
+      headers <- c("Category", "Factor", "OR", "95% CI Lower", "95% CI Upper", "P-value")
+      headers_decimals <- c("OR", "95% CI Lower", "95% CI Upper", "P-value")
+    }
     colnames(chart_data) <- headers
     #Consider updating input data so p-values replaced with <0.01 if 0.00 (to support presentation)
     DT::datatable(chart_data, rownames = F) %>% DT::formatRound(headers_decimals, 2)
