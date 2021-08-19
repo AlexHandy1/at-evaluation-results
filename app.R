@@ -213,7 +213,7 @@ server <- function(input, output) {
     #tidy labelling
     colnames(chart_data)[3] = "Drug category"
     
-    ggplot(chart_data, aes(y = individuals_n, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    ggplot(chart_data, aes(y = individuals_pct, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
   }, width = 1000, height = 800)
   
   output$q2_plot = renderPlot({
