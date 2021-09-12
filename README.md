@@ -8,6 +8,7 @@ New evidence is emerging that individuals already taking AT medication (whether 
 
 This study, therefore, set out to conduct the largest scale evaluation of AT use in individuals with AF to date in routinely updated, linked, population-scale electronic health record (EHR) data for 56 million people in England. Utilising this statistical power, this study investigated what factors are associated with pre-existing AT use and whether pre-existing AT use (across sub-types) may reduce COVID-19 related hospitalisation and death.
 
+Paper available [here](https://www.medrxiv.org/content/10.1101/2021.09.03.21263023v1)
 
 ## Code 
 
