@@ -39,6 +39,8 @@ select_full_q3_data = function(medication, outcome, time_period, method){
     med_file = "ac_only"
   } else if (medication == "DOACs vs warfarin") {
     med_file = "doacs"
+  } else if (medication == "Dabigatran vs factor Xa") {
+    med_file = "dabigatran"
   } else {}
   
   #outcome
@@ -99,10 +101,17 @@ ui <- fluidPage(
         ),
         
         conditionalPanel(
-          condition = "input.question == 'AT use factors' | (input.question == 'AT and COVID-19 outcomes' &  input.summary == 'Full')",
-          selectInput("medication", strong("Medication comparison"), 
+          condition = "input.question == 'AT use factors'",
+          selectInput("medication_q2", strong("Medication comparison"), 
                       choices = c("AT vs no AT","AC vs AP", "DOACs vs warfarin"), selected = "AT vs no AT"),
         ), 
+        
+        conditionalPanel(
+          condition = "(input.question == 'AT and COVID-19 outcomes' &  input.summary == 'Full')",
+          selectInput("medication_q3", strong("Medication comparison"), 
+                      choices = c("AT vs no AT","AC vs AP", "DOACs vs warfarin", "Dabigatran vs factor Xa"), selected = "AT vs no AT"),
+        ),
+        
         # conditionalPanel(
         #   condition = "input.question == 'AT use factors'",
         #   selectInput("start_date", strong("Date"), 
@@ -219,7 +228,7 @@ server <- function(input, output) {
   output$q2_plot = renderPlot({
     
     #get inputs
-    medication = input$medication
+    medication = input$medication_q2
     #NOTE: keep structure in case want to add other time points back in
     start_date = "Jan 2020"
     
@@ -247,7 +256,7 @@ server <- function(input, output) {
   
   output$q2_table = DT::renderDataTable({
     #get inputs
-    medication = input$medication
+    medication = input$medication_q2
     #NOTE: keep structure in case want to add other time points back in
     start_date = "Jan 2020"
     
@@ -321,7 +330,7 @@ server <- function(input, output) {
   
   output$q3_full_plot = renderPlot({
     #get inputs
-    medication = input$medication
+    medication = input$medication_q3
     outcome = input$outcome
     time_period = input$time_period
     method = input$method
@@ -361,7 +370,7 @@ server <- function(input, output) {
   output$q3_full_table = DT::renderDataTable({
     
     #get inputs
-    medication = input$medication
+    medication = input$medication_q3
     outcome = input$outcome
     time_period = input$time_period
     method = input$method
