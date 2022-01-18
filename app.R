@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(DT)
 library(RColorBrewer)
+library(ggrepel)
 
 select_q2_data = function(medication, start_date){
   
@@ -215,6 +216,7 @@ server <- function(input, output) {
         title_text = "Individual antithrombotic prescriptions by drug Jan 2020 - May 2021"
       }
     
+    
     #order by largest drug category first
     chart_data$Drug.category <- reorder(chart_data$Drug.category, chart_data$individuals_pct)
     chart_data$Drug.category <- factor(chart_data$Drug.category, levels=levels(chart_data$Drug.category))
@@ -222,8 +224,20 @@ server <- function(input, output) {
     #tidy labelling
     colnames(chart_data)[3] = "Drug category"
     
-    ggplot(chart_data, aes(y = individuals_pct, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
-  }, width = 1000, height = 800)
+    num_cat = length(unique(chart_data$`Drug category`))
+    ggplot(data=chart_data, aes(x = time_index, y = individuals_pct, group = `Drug category`, color = `Drug category`)) +
+      geom_line() +
+      geom_point(data = chart_data) +
+      geom_label_repel(aes(time_index, individuals_pct, fill = `Drug category`, label = sprintf('%0.1f%%', individuals_pct)),
+                       data = rbind(chart_data[1:num_cat, ,], chart_data[(nrow(chart_data)-(num_cat-1)):nrow(chart_data), ,]),
+                       label.size = NA,
+                       size = 2.5,
+                       fill = "white",
+                       show.legend = FALSE) + labs(title=title_text,x ="Time index", y = "Individuals %") + ylim(0,100)
+    
+    #legacy stacked bar chart
+    #ggplot(chart_data, aes(y = individuals_pct, x = time_index, fill = `Drug category`, label = paste(individuals_pct, "%", sep="")))+ geom_bar(stat="identity") + geom_text(size = 3, position = position_stack(vjust = 0.5)) + scale_fill_brewer(palette="Blues") + labs(title=title_text,x ="Time index", y = "Individuals %") + theme_bw() + theme(axis.text.y=element_blank(), axis.ticks.y=element_blank(), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+  }, width = 1000, height = 600)
   
   output$q2_plot = renderPlot({
     
